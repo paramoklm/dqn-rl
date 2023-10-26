@@ -17,15 +17,22 @@ def preprocess_frame(frame, prev_frame=None):
 
     return frame
 
-def stack_frames(frames, m=4):
+def stack_frames(frames, m=4, visualize=False):
     '''
     Function to apply preprocessing to the m most recent frames and stack them
     '''
     # Stack the frames along the depth dimension to produce the input to the Q-function
-    return np.stack(frames, axis=2)
+    input = np.stack(frames, axis=2)
+
+    if visualize:
+        return input
+
+    input = input.transpose(2, 0, 1)  # Change shape from (84, 84, 4) to (4, 84, 84)
+    return input[np.newaxis, :] # Shape to (1, 4, 84, 84)
 
 
-def preprocess(frames, m):
+
+def preprocess(frames, m, visualize=False):
     '''
     Preprocessing to the m most recent frames
         The last frame in frames is the most recent one (the current one)
@@ -36,5 +43,5 @@ def preprocess(frames, m):
         preprocessed_frames.append(preprocess_frame(frames[m - 1 - i], frames[m - 2 - i]))
     # Process last frame alone
     preprocessed_frames.append(preprocess_frame(frames[0]))
-    
-    return stack_frames(preprocessed_frames)
+
+    return stack_frames(preprocessed_frames, visualize=visualize)
