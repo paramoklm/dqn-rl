@@ -7,7 +7,13 @@ import gymnasium as gym
 env = gym.make("ALE/Breakout-v5", obs_type="rgb")
 
 action = 3
-env.reset()
+state = env.reset()
+frames = preprocess(state, m=1)
+
+# print(state.shape)
+frame = Image.fromarray(state[0])
+frame.save(f'initial_state.png')
+
 for episode in range(5):
     next_state, reward, done, _, _ = env.step(action)
     frames = preprocess([next_state], m=1, visualize=True)

@@ -27,8 +27,8 @@ def stack_frames(frames, visualize=False):
     if visualize:
         return input
 
-    input = input.transpose(2, 0, 1)  # Change shape from (84, 84, 4) to (4, 84, 84)
-    return input[np.newaxis, :] # Shape to (1, 4, 84, 84)
+    return input.transpose(2, 0, 1)  # Change shape from (84, 84, 4) to (4, 84, 84)
+    # return input[np.newaxis, :] # Shape to (1, 4, 84, 84)
 
 
 

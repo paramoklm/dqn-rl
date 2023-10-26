@@ -9,7 +9,7 @@ class DQN(nn.Module):
         super(DQN, self).__init__()
         
         # Convolutional layers
-        self.conv1 = nn.Conv2d(in_channels=4, out_channels=32, kernel_size=8, stride=4)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=8, stride=4)
         self.relu1 = nn.ReLU()
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2)
         self.relu2 = nn.ReLU()

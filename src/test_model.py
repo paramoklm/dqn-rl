@@ -19,6 +19,10 @@ for i in range(4):
 input = preprocess(frames, 4)
 
 
-qvalues = dqnModel(torch.tensor(input, dtype=torch.float32))
+print(torch.tensor(input, dtype=torch.float32).unsqueeze(0).shape)
+
+qvalues = dqnModel(torch.tensor(input, dtype=torch.float32).unsqueeze(0))
+
 
 print(qvalues)
+print(qvalues.argmax().item())
