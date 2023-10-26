@@ -10,7 +10,7 @@ action = 3
 env.reset()
 for episode in range(5):
     next_state, reward, done, _, _ = env.step(action)
-    frames = preprocess([next_state], m=1)
+    frames = preprocess([next_state], m=1, visualize=True)
     frame = Image.fromarray(next_state)
     frame.save(f'frame_color-{episode}.png')
     for i in range(frames.shape[2]):
