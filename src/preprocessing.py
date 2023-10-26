@@ -17,7 +17,7 @@ def preprocess_frame(frame, prev_frame=None):
 
     return frame
 
-def stack_frames(frames, m=4, visualize=False):
+def stack_frames(frames, visualize=False):
     '''
     Function to apply preprocessing to the m most recent frames and stack them
     '''
