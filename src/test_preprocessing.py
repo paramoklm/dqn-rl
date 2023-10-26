@@ -16,6 +16,3 @@ for episode in range(5):
     for i in range(frames.shape[2]):
         frame = Image.fromarray(frames[:, :, i])
         frame.save(f'frame_{i}-{episode}.png')
-
-    print(episode)
-
