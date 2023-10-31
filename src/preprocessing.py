@@ -9,6 +9,15 @@ def preprocess_frame(frame, prev_frame=None):
         # Take the maximum value for each pixel color value over the current frame and the previous frame
         frame = np.maximum(frame, prev_frame)
 
+    yuv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2YUV)
+
+    # Extract the Y channel (luminance)
+    y_channel = yuv_image[:,:,0]
+
+    y_channel_scale = cv2.resize(y_channel, (84, 84), interpolation=cv2.INTER_AREA)
+
+    return y_channel_scale
+
     # Extract the Y channel (luminance) from the RGB frame
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
@@ -38,6 +47,7 @@ def preprocess(frames, m, visualize=False):
         The last frame in frames is the most recent one (the current one)
     '''
     preprocessed_frames = []
+    m = len(frames)
     for i in range(m - 1):
         # Process frames two by two
         preprocessed_frames.append(preprocess_frame(frames[m - 1 - i], frames[m - 2 - i]))
