@@ -41,17 +41,35 @@ def stack_frames(frames, visualize=False):
 
 
 
-def preprocess(frames, m, visualize=False):
-    '''
-    Preprocessing to the m most recent frames
-        The last frame in frames is the most recent one (the current one)
-    '''
-    preprocessed_frames = []
-    m = len(frames)
-    for i in range(m - 1):
-        # Process frames two by two
-        preprocessed_frames.append(preprocess_frame(frames[m - 1 - i], frames[m - 2 - i]))
-    # Process last frame alone
-    preprocessed_frames.append(preprocess_frame(frames[0]))
+# def preprocess(frames, m, visualize=False):
+#     '''
+#     Preprocessing to the m most recent frames
+#         The last frame in frames is the most recent one (the current one)
+#     '''
+#     preprocessed_frames = []
+#     m = len(frames)
+#     for i in range(m - 1):
+#         # Process frames two by two
+#         preprocessed_frames.append(preprocess_frame(frames[m - 1 - i], frames[m - 2 - i]))
+#     # Process last frame alone
+#     preprocessed_frames.append(preprocess_frame(frames[0]))
+# 
+#     return stack_frames(preprocessed_frames, visualize=visualize)
 
-    return stack_frames(preprocessed_frames, visualize=visualize)
+
+def combine_frames(frame1, frame2):
+    # Define your combining function here (example: sum of frames)
+    return np.maximum(frame1, frame2)
+
+def preprocess(frame_stack):
+    num_frames, height, width = frame_stack.shape
+
+    folded_frames = []
+    for i in range(num_frames - 1):
+        combined = combine_frames(frame_stack[i], frame_stack[i + 1])
+        folded_frames.append(combined)
+
+    # Handling the last frame alone
+    folded_frames.append(frame_stack[-1])
+
+    return np.stack(folded_frames)

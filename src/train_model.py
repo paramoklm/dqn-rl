@@ -4,6 +4,11 @@ import random
 import torch
 from PIL import Image
 
+
+from gymnasium.wrappers import FrameStack
+from gymnasium.wrappers import GrayScaleObservation
+from gymnasium.wrappers import ResizeObservation
+
 from datetime import datetime
 
 from torch.utils.tensorboard import SummaryWriter
@@ -23,7 +28,7 @@ def env_reset(env: gym.Env, m):
     for _ in range(m - 1):
         next_state, reward, done, _, _ = env.step(action)
 
-        reward_total += reward
+        reward_total = reward
 
         states.append(next_state)
 
@@ -39,7 +44,7 @@ def env_step(env: gym.Env, action, m):
     for _ in range(m):
         next_state, reward, done, _, _ = env.step(action)
 
-        reward_total += reward
+        reward_total = reward
 
         states.append(next_state)
 
@@ -66,6 +71,36 @@ def visualize_preprocessing(stack):
     plt.tight_layout()
     plt.show()
 
+
+def get_model_weights(model):
+    """
+    Function to retrieve the weights of a PyTorch model.
+
+    Args:
+    - model (torch.nn.Module): PyTorch model from which weights are extracted
+
+    Returns:
+    - weights (dict): Dictionary containing the model's weights
+    """
+    weights = {}
+    for name, param in model.named_parameters():
+        weights[name] = param.clone().detach().cpu().numpy()
+    return weights
+
+def check_weight_difference(weights1, weights2):
+    """
+    Function to check for differences between two sets of weights.
+
+    Args:
+    - weights1 (dict): Dictionary containing the weights of model 1
+    - weights2 (dict): Dictionary containing the weights of model 2
+
+    Returns:
+    - difference (bool): True if there is any weight difference, False otherwise
+    """
+    difference = any((weights1[key] != weights2[key]).any() for key in weights1)
+    return difference
+
 def play_and_train(env: gym.Env, agent: DQNAgent, m, num_episodes=10000, checkpoint_episode=100):
 
     checkpoint_reward = 0
@@ -78,22 +113,27 @@ def play_and_train(env: gym.Env, agent: DQNAgent, m, num_episodes=10000, checkpo
         else:
             writer.add_scalar('Reward/train', 0, frame_i) 
 
-        state, episode_reward, done = env_reset(env, m)
-
-        if done:
-            continue
+        # state, episode_reward, done = env_reset(env, m)
+        state, _ = env.reset()
+        state = preprocess(state)
+        episode_reward = 0
+        done = False
         
         i = 0
         for _ in range(int(1e4)):
             # env.render()
             state_tensor = state[np.newaxis, :]
 
-            action, qvalue_max = agent.get_action(state_tensor, online=True)
+            action, qvalue_max, epsilon = agent.get_action(state_tensor, online=True)
 
+            writer.add_scalar('Epsilon/train', epsilon, frame_i)
             writer.add_scalar('Qvalue/train', qvalue_max, frame_i)
+            
             frame_i += 1
 
-            next_state, reward, done = env_step(env, action, m) 
+            # next_state, reward, done = env_step(env, action, m) 
+            next_state, reward, done, _, _ = env.step(action)
+            next_state = preprocess(next_state)
 
             episode_reward += reward
             
@@ -107,7 +147,7 @@ def play_and_train(env: gym.Env, agent: DQNAgent, m, num_episodes=10000, checkpo
                 loss = agent.update_online_net()
                 writer.add_scalar('Loss/train', loss, episode)
 
-            if agent.if_target_to_update(episode):
+            if agent.if_target_to_update(frame_i):
                 agent.update_target_net()
 
             
@@ -115,7 +155,7 @@ def play_and_train(env: gym.Env, agent: DQNAgent, m, num_episodes=10000, checkpo
 
         checkpoint_reward += episode_reward 
         if episode % checkpoint_episode == 0:
-            print(f"Episode {episode}: {checkpoint_reward / checkpoint_episode}")
+            # print(f"Episode {episode}: {checkpoint_reward / checkpoint_episode}")
             checkpoint_reward = 0
 
     env.close()
@@ -126,7 +166,11 @@ writer = SummaryWriter(log_dir)
 
 # Environment (Only using Breakout for now)
 env = gym.make("ALE/Breakout-v5", obs_type="rgb")#, render_mode="human")
-agent = DQNAgent(learning_rate=0.01, gamma=0.99, num_actions=env.action_space.n,
-                 epsilon_start=1, epsilon_end=0.1, epsilon_decay=150000, memory=100, replay_start_size=5000, target_update_freq=4)
+env = GrayScaleObservation(env)
+env = ResizeObservation(env, 84)
+env = FrameStack(env, 4)
+
+agent = DQNAgent(learning_rate=0.00025, gamma=0.99, num_actions=env.action_space.n,
+                 epsilon_start=1, epsilon_end=0.1, epsilon_decay=30000, memory=2000, replay_start_size=2000, target_update_freq=500)
 
 play_and_train(env, agent, 4, checkpoint_episode=1)

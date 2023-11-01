@@ -52,7 +52,7 @@ class DQNAgent:
 
         self.target_net.eval()
         
-        self.optimizer = torch.optim.Adam(self.online_net.parameters(), lr=self.learning_rate)
+        self.optimizer = torch.optim.Adam(self.online_net.parameters(), lr=self.learning_rate, eps=1e-6)
  
 
     def loss_function(self, qvalues_target, qvalues_online):
@@ -63,20 +63,20 @@ class DQNAgent:
         return self.online_net(state) if online else self.target_net(state)
     
     def get_action(self, state: torch.Tensor, online: bool):
-        if random.random() < self.epsilon:
+        if random.random() < self.epsilon or self.replay_start_size != 0:
             action = random.randint(0, self.num_actions - 1)
         else:
             qvalues = self.get_qvalues(torch.tensor(state, dtype=torch.float32), online)
             action = qvalues.argmax().item()
-            qvalue_max = torch.max(qvalues).item()
-            
-        self.epsilon = max(self.epsilon_end, self.epsilon_start - (self.epsilon_start - self.epsilon_end) * self.timestep / self.epsilon_decay)
-        self.timestep += 1
+
+        if self.replay_start_size == 0:    
+            self.epsilon = max(self.epsilon_end, self.epsilon_start - (self.epsilon_start - self.epsilon_end) * self.timestep / self.epsilon_decay)
+            self.timestep += 1
         
         qvalues = self.get_qvalues(torch.tensor(state, dtype=torch.float32), online)
         qvalue_max = torch.max(qvalues).item()
 
-        return action, qvalue_max
+        return action, qvalue_max, self.epsilon
     
     def add_to_replay_buffer(self, transition):
         if (len(self.replay_buffer) == self.memory):
