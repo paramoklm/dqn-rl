@@ -105,18 +105,24 @@ def play_and_train(env: gym.Env, agent: DQNAgent, m, num_episodes=10000, checkpo
 
     checkpoint_reward = 0
     episode_reward = 0
+    episode_loss = None
     frame_i = 0
     episode_reward = None
     for episode in range(num_episodes):
         if episode_reward:
             writer.add_scalar('Reward/train', episode_reward, frame_i)
         else:
-            writer.add_scalar('Reward/train', 0, frame_i) 
+            writer.add_scalar('Reward/train', 0, frame_i)
+
+        if not episode_loss is None:
+            writer.add_scalar('Loss_per_episode/train', episode_loss, frame_i)
+
 
         # state, episode_reward, done = env_reset(env, m)
         state, _ = env.reset()
         state = preprocess(state)
         episode_reward = 0
+        episode_loss = 0
         done = False
         
         i = 0
@@ -145,6 +151,7 @@ def play_and_train(env: gym.Env, agent: DQNAgent, m, num_episodes=10000, checkpo
 
             if (agent.add_to_replay_buffer((state, action, reward, next_state))):
                 loss = agent.update_online_net()
+                episode_loss += loss
                 writer.add_scalar('Loss/train', loss, episode)
 
             if agent.if_target_to_update(frame_i):
@@ -170,7 +177,7 @@ env = GrayScaleObservation(env)
 env = ResizeObservation(env, 84)
 env = FrameStack(env, 4)
 
-agent = DQNAgent(learning_rate=0.00025, gamma=0.99, num_actions=env.action_space.n,
-                 epsilon_start=1, epsilon_end=0.1, epsilon_decay=30000, memory=2000, replay_start_size=2000, target_update_freq=500)
+agent = DQNAgent(learning_rate=0.0001, gamma=0.99, num_actions=env.action_space.n,
+                 epsilon_start=1, epsilon_end=0.1, epsilon_decay=30000, memory=5000, replay_start_size=5000, target_update_freq=1000)
 
 play_and_train(env, agent, 4, checkpoint_episode=1)
