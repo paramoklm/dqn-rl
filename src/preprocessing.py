@@ -72,4 +72,4 @@ def preprocess(frame_stack):
     # Handling the last frame alone
     folded_frames.append(frame_stack[-1])
 
-    return np.stack(folded_frames)
+    return np.stack(folded_frames).astype(np.uint8)

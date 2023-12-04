@@ -119,14 +119,15 @@ def play_and_train(env: gym.Env, agent: DQNAgent, m, num_episodes=10000, checkpo
 
 
         # state, episode_reward, done = env_reset(env, m)
-        state, _ = env.reset()
+        state, info = env.reset()
+        lives = info['lives']
+        next_life = -1
         state = preprocess(state)
         episode_reward = 0
         episode_loss = 0
         done = False
         
-        i = 0
-        for _ in range(int(1e4)):
+        while not done:
             # env.render()
             state_tensor = state[np.newaxis, :]
 
@@ -138,18 +139,16 @@ def play_and_train(env: gym.Env, agent: DQNAgent, m, num_episodes=10000, checkpo
             frame_i += 1
 
             # next_state, reward, done = env_step(env, action, m) 
-            next_state, reward, done, _, _ = env.step(action)
+            next_state, reward, done, _, info = env.step(action)
+
+            next_life = info["lives"]
+            done = done if done else (lives != None and lives == next_life - 1)
+            
+            episode_reward += reward
+
             next_state = preprocess(next_state)
 
-            episode_reward += reward
-            
-            i += 1
-            if done:
-                # state, _, done = env_reset(env, m)
-                # continue
-                break
-
-            if (agent.add_to_replay_buffer((state, action, reward, next_state))):
+            if (agent.add_to_replay_buffer((state, action, reward, next_state, done))):
                 loss = agent.update_online_net()
                 episode_loss += loss
                 writer.add_scalar('Loss/train', loss, episode)
@@ -158,16 +157,21 @@ def play_and_train(env: gym.Env, agent: DQNAgent, m, num_episodes=10000, checkpo
                 agent.update_target_net()
 
             
+            lives = next_life
             state = next_state
+
+
 
         checkpoint_reward += episode_reward 
         if episode % checkpoint_episode == 0:
+
+            writer.add_scalar('Reward_per_episode/train', checkpoint_reward, episode)
             # print(f"Episode {episode}: {checkpoint_reward / checkpoint_episode}")
             checkpoint_reward = 0
 
     env.close()
 
-log_dir = f"logs_boxing/{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+log_dir = f"logs_breakout/{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 
 writer = SummaryWriter(log_dir)
 
@@ -178,6 +182,12 @@ env = ResizeObservation(env, 84)
 env = FrameStack(env, 4)
 
 agent = DQNAgent(learning_rate=0.0001, gamma=0.99, num_actions=env.action_space.n,
-                 epsilon_start=1, epsilon_end=0.1, epsilon_decay=30000, memory=5000, replay_start_size=5000, target_update_freq=1000)
+                 epsilon_start=1, epsilon_end=0.1, epsilon_decay=30000, memory=5000, replay_start_size=5000, target_update_freq=10000) 
 
 play_and_train(env, agent, 4, checkpoint_episode=1)
+
+
+# Remettre preprocessing comme avant (pas framestack wrapper)
+# Passer sur gpu
+# memory= 600000
+# 

@@ -53,6 +53,16 @@ class DQNAgent:
         self.target_net.eval()
         
         self.optimizer = torch.optim.Adam(self.online_net.parameters(), lr=self.learning_rate, eps=1e-6)
+
+
+    def clip_loss(self, loss):
+        loss_value = loss.item()
+        if (loss_value > 1):
+            loss_value = 1
+        if (loss_value < -1):
+            loss_value = -1
+
+        return torch.tensor(loss_value)
  
 
     def loss_function(self, qvalues_target, qvalues_online):
@@ -91,12 +101,13 @@ class DQNAgent:
     def update_online_net(self):
         batch = random.sample(self.replay_buffer, self.batch_size)
         
-        states, actions, rewards, next_states = zip(*batch)
+        states, actions, rewards, next_states, dones = zip(*batch)
 
         states = torch.tensor(np.array(states), dtype=torch.float32)
         actions = torch.tensor(actions, dtype=torch.long)
         rewards = torch.tensor(rewards, dtype=torch.float32)
         next_states = torch.tensor(np.array(next_states), dtype=torch.float32)
+        dones = torch.tensor(dones, dtype=torch.int)
 
         self.online_net.zero_grad()
 
@@ -104,8 +115,9 @@ class DQNAgent:
 
         qvalues_next = self.target_net(next_states).max(1)[0].detach()
 
-        qvalues_target = rewards + self.gamma * qvalues_next
+        qvalues_target = rewards + (1 - dones) * self.gamma * qvalues_next
 
+        # loss = torch.clamp(self.loss_function(qvalues_target.unsqueeze(1), qvalues_online), min=-1, max=1)
         loss = self.loss_function(qvalues_target.unsqueeze(1), qvalues_online)
         # print(loss)
         loss.backward()
